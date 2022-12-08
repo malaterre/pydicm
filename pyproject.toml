@@ -1,0 +1,13 @@
+[tool.poetry]
+name = "pydicm"
+version = "0.0.1"
+description = "pydicm"
+homepage = "https://github.com/malaterre/pydicm"
+authors = ["Mathieu Malaterre <mathieu.malaterre@gmail.com>"]
+license = "ISC"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: ISC",
+    "Topic :: Utilities"
+]
+readme = "README.md"
