@@ -1,0 +1,3 @@
+[submodule "libdicm"]
+	path = libdicm
+	url = git@github.com:malaterre/libdicm.git
