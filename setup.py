@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: BSD-3
 # https://github.com/pybind/cmake_example
 import os
+import platform
 import re
 import subprocess
 import sys
@@ -28,6 +29,18 @@ class CMakeExtension(Extension):
 
 
 class CMakeBuild(build_ext):
+    # https://stackoverflow.com/questions/4529555/building-a-ctypes-based-c-library-with-distutils
+    def get_ext_filename(self, ext_name):
+        if platform.system() == "Windows":
+            return "dicm.dll"
+        elif platform.system() == "Darwin":
+            return "libdicm.dylib"
+        else:
+            return "libdicm.so.0"
+
+    def get_export_symbols(self, ext):
+        return ext.export_symbols
+
     def build_extension(self, ext: CMakeExtension) -> None:
         # Must be in this form due to bug in .resolve() only fixed in Python 3.10+
         ext_fullpath = Path.cwd() / self.get_ext_fullpath(ext.name)  # type: ignore[no-untyped-call]
