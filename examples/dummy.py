@@ -3,9 +3,8 @@ from pydicm import *
 fn = "/tmp/input.dcm"
 
 with open(fn, "rb") as f:
-    io = IO(f)
     parser = Parser()
-    parser.set_input(io)
+    parser.set_input(f)
     done = False
     while not done:
         ret = parser.next_event()

@@ -112,5 +112,47 @@ dicm_parser_read_value = _func(
     [ctypes.POINTER(_Parser), ctypes.c_void_p, ctypes.c_size_t],
 )
 
-
 dicm_parser_delete = _func("dicm_delete", None, [ctypes.POINTER(_Parser)])
+
+
+class IO:
+    """IO wrapper to python file-object"""
+
+    def __init__(self, file_object):
+        """doc."""
+        mem = ctypes.POINTER(_IO)()
+        # I need to keep a reference to callbacks to prevent gc:
+        # https://stackoverflow.com/questions/74517129/garbage-collection-in-python-module
+        self._read = self._getReadCallbackFunc()
+        self._seek = py_seek_func
+        self._write = py_write_func
+        ret = dicm_io_create(ctypes.byref(mem), self._read, self._seek, self._write)
+        if ret < 0:
+            raise MemoryError("internal memory allocation failure")
+        self._io = mem.contents
+        self.file_object = file_object
+
+    def _getReadCallbackFunc(self):  # type: ignore
+        """Callback from python layer to C layer"""
+
+        # simply implementation, instead of poking around with io pointer,
+        # simply use a method instead of a function
+        # https://stackoverflow.com/questions/3245859/back-casting-a-ctypes-py-object-in-a-callback
+        @FPREADFUNC
+        def my_read_func(io, buf, size):
+            # FIXME: readinto ?
+            tmp = self.file_object.read(size)  # bytearray
+            if len(tmp) != 0:
+                # https://stackoverflow.com/questions/68075730/converting-a-ctypes-c-void-p-and-ctypes-c-size-t-to-bytearray-or-string
+                b = ctypes.cast(buf, ctypes.POINTER(ctypes.c_ubyte * size)).contents
+                ctypes.memmove(b, tmp, len(tmp))
+                return len(tmp)
+            return 0
+
+        return my_read_func
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        dicm_io_delete(self._io)

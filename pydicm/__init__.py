@@ -4,51 +4,12 @@ from enum import Enum
 import ctypes
 
 
-class IO:
-    """IO wrapper to python file-object"""
-
-    def __init__(self, file_object):
-        """doc."""
-        mem = ctypes.POINTER(lowlevel._IO)()
-        self._read = self._getReadCallbackFunc()
-        self._seek = lowlevel.py_seek_func
-        self._write = lowlevel.py_write_func
-        ret = lowlevel.dicm_io_create(
-            ctypes.byref(mem), self._read, self._seek, self._write
-        )
-        if ret < 0:
-            raise MemoryError("internal memory allocation failure")
-        self._io = mem.contents
-        self.file_object = file_object
-
-    def _getReadCallbackFunc(self):  # type: ignore
-        """Callback from python layer to C layer"""
-
-        @lowlevel.FPREADFUNC
-        def my_read_func(io, buf, size):
-            tmp = self.file_object.read(size)  # bytearray
-            if len(tmp) != 0:
-                # https://stackoverflow.com/questions/68075730/converting-a-ctypes-c-void-p-and-ctypes-c-size-t-to-bytearray-or-string
-                b = ctypes.cast(buf, ctypes.POINTER(ctypes.c_ubyte * size)).contents
-                ctypes.memmove(b, tmp, len(tmp))
-                return len(tmp)
-            return 0
-
-        return my_read_func
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        lowlevel.dicm_io_delete(self._io)
-
-
 class Key:
     """
     Main class for key
     """
 
-    def __init__(self, key):
+    def __init__(self, key: lowlevel._Key):
         self.key = key
 
     # def __repr__(self):
@@ -81,7 +42,8 @@ class Parser:
         lowlevel.dicm_parser_delete(self._parser)
 
     def set_input(self, io):
-        lowlevel.dicm_parser_set_input(self._parser, io._io)
+        self._io = lowlevel.IO(io)  # FIXME
+        lowlevel.dicm_parser_set_input(self._parser, self._io._io)
 
     class EventType(Enum):
         STREAM_START = 0
@@ -104,18 +66,24 @@ class Parser:
 
     def key(self):
         tmp = lowlevel._Key()
-        lowlevel.dicm_parser_get_key(self._parser, ctypes.byref(tmp))
+        ret = lowlevel.dicm_parser_get_key(self._parser, ctypes.byref(tmp))
+        if ret < 0:
+            raise ValueError(f"Invalid key: {ret}")
         return Key(tmp)
 
     def value_length(self):
         tmp = ctypes.c_size_t(0)
         ret = lowlevel.dicm_parser_get_value_length(self._parser, ctypes.byref(tmp))
+        if ret < 0:
+            raise ValueError(f"Invalid value length: {ret}")
         return tmp.value
 
     def read_value(self, size):
         ba = bytearray(size)
         byte_array = ctypes.c_ubyte * len(ba)
-        lowlevel.dicm_parser_read_value(
+        ret = lowlevel.dicm_parser_read_value(
             self._parser, byte_array.from_buffer(ba), len(ba)
         )
+        if ret < 0:
+            raise ValueError(f"Invalid value: {ret}")
         return ba
