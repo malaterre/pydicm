@@ -7,7 +7,6 @@ without any pollution.
 """
 import ctypes
 
-# from ctypes import *
 from typing import final
 import logging
 
@@ -23,6 +22,31 @@ def _func(name, restype, argtypes, errcheck=None):
     if errcheck is not None:
         func.errcheck = errcheck
     return func
+
+
+# logging
+FPLOGFUNC = ctypes.CFUNCTYPE(None, ctypes.c_int, ctypes.c_char_p)
+dicm_configure_log_msg = _func("dicm_configure_log_msg", None, [FPLOGFUNC])
+
+@FPLOGFUNC
+def py_log_func(level, msg):
+    # https://docs.python.org/3/library/logging.html#levels
+    log_levels = {
+        0: logging.DEBUG // 2,  # Trace
+        1: logging.DEBUG,  # Debug
+        2: logging.INFO,  # Information
+        3: logging.WARNING,  # Warning
+        4: logging.ERROR,  # Error
+        5: logging.CRITICAL,  # Critical
+        # logging.NOTSET => wotsit ?
+    }
+    log = logging.getLogger("pydicm")
+    log.log(log_levels[level], msg.decode("utf-8"))
+    return
+
+
+# setup default listener:
+dicm_configure_log_msg(py_log_func)
 
 
 @final

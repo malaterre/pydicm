@@ -43,7 +43,9 @@ class Parser:
 
     def set_input(self, io):
         self._io = lowlevel.IO(io)  # FIXME
-        lowlevel.dicm_parser_set_input(self._parser, self._io._io)
+        ret = lowlevel.dicm_parser_set_input(self._parser, self._io._io)
+        if ret < 0:
+            raise ValueError(f"Invalid i/o")
 
     class EventType(Enum):
         STREAM_START = 0

@@ -1,5 +1,8 @@
 from pydicm import *
 
+# import logging
+# logging.basicConfig(level=0)
+
 fn = "/tmp/input.dcm"
 
 with open(fn, "rb") as f:
