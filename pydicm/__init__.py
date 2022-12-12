@@ -26,13 +26,11 @@ class IO:
 
         @lowlevel.FPREADFUNC
         def my_read_func(io, buf, size):
-            # FIXME: too many copies:
             tmp = self.file_object.read(size)  # bytearray
-            assert len(tmp) == size or len(tmp) == 0
             if len(tmp) != 0:
-                cbytearray = ctypes.c_uint8 * size
-                byte_arr = cbytearray.from_buffer_copy(tmp)
-                ctypes.memmove(buf, byte_arr, len(tmp))
+                # https://stackoverflow.com/questions/68075730/converting-a-ctypes-c-void-p-and-ctypes-c-size-t-to-bytearray-or-string
+                b = ctypes.cast(buf, ctypes.POINTER(ctypes.c_ubyte * size)).contents
+                ctypes.memmove(b, tmp, len(tmp))
                 return len(tmp)
             return 0
 
@@ -74,7 +72,6 @@ class Parser:
         ret = lowlevel.dicm_parser_create(ctypes.byref(mem))
         if ret < 0:
             raise MemoryError("internal memory allocation failure")
-        # self._parser = mem[0]
         self._parser = mem.contents
 
     def __enter__(self):
@@ -117,7 +114,7 @@ class Parser:
 
     def read_value(self, size):
         ba = bytearray(size)
-        byte_array = ctypes.c_uint8 * len(ba)
+        byte_array = ctypes.c_ubyte * len(ba)
         lowlevel.dicm_parser_read_value(
             self._parser, byte_array.from_buffer(ba), len(ba)
         )
