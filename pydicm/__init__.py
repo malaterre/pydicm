@@ -1,12 +1,11 @@
 from pydicm import lowlevel  # FIXME: hide me
 
+from enum import Enum
 import ctypes
 
 
 class IO:
-    """A pydicm parser.
-    Main class to parse
-    """
+    """IO wrapper to python file-object"""
 
     def __init__(self, file_object):
         """doc."""
@@ -87,8 +86,24 @@ class Parser:
     def set_input(self, io):
         lowlevel.dicm_parser_set_input(self._parser, io._io)
 
+    class EventType(Enum):
+        STREAM_START = 0
+        STREAM_END = 1
+        DATASET_START = 2
+        DATASET_END = 3
+        ELEMENT_KEY = 4
+        FRAGMENT = 5
+        ELEMENT_VALUE = 6
+        ITEM_START = 7
+        ITEM_END = 8
+        SEQUENCE_START = 9
+        SEQUENCE_END = 10
+
     def next_event(self):
-        return lowlevel.dicm_parser_next_event(self._parser)
+        etype = lowlevel.dicm_parser_next_event(self._parser)
+        if etype < 0:
+            raise ValueError(f"Invalid Event Type: {etype}")
+        return Parser.EventType(etype)
 
     def key(self):
         tmp = lowlevel._Key()
@@ -107,16 +122,3 @@ class Parser:
             self._parser, byte_array.from_buffer(ba), len(ba)
         )
         return ba
-
-
-DICM_STREAM_START_EVENT = 0
-DICM_STREAM_END_EVENT = 1
-DICM_DATASET_START_EVENT = 2
-DICM_DATASET_END_EVENT = 3
-DICM_ELEMENT_KEY_EVENT = 4
-DICM_FRAGMENT_EVENT = 5
-DICM_ELEMENT_VALUE_EVENT = 6
-DICM_ITEM_START_EVENT = 7
-DICM_ITEM_END_EVENT = 8
-DICM_SEQUENCE_START_EVENT = 9
-DICM_SEQUENCE_END_EVENT = 10
