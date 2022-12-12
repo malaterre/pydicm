@@ -143,6 +143,7 @@ class CMakeBuild(build_ext):
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
     name="pydicm",
+    packages=["pydicm"],
     version="0.0.1",
     author="Mathieu Malaterre",
     author_email="mathieu.malaterre@gmail.com",
@@ -152,5 +153,5 @@ setup(
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     extras_require={"test": ["pytest>=6.0"]},
-    python_requires=">=3.10",
+    python_requires=">=3.9.2",
 )
